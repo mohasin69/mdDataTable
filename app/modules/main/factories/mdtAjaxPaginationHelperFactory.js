@@ -8,6 +8,8 @@
             this.rowOptions = params.mdtRowOptions;
             this.paginatorFunction = params.mdtRowPaginatorFunction;
             this.mdtRowPaginatorErrorMessage = params.mdtRowPaginatorErrorMessage || 'Ajax error during loading contents.';
+            this.mdtRowPaginatorNoResultsMessage = params.mdtRowPaginatorNoResultsMessage || 'No results.';
+            this.mdtTriggerRequest = params.mdtTriggerRequest;
 
             if(params.paginationSetting &&
                 params.paginationSetting.hasOwnProperty('rowsPerPageValues') &&
@@ -27,6 +29,13 @@
 
             //fetching the 1st page
             this.fetchPage(this.page);
+
+            //triggering ajax call manually
+            if(this.mdtTriggerRequest) {
+                params.mdtTriggerRequest({
+                    loadPageCallback: this.fetchPage.bind(this)
+                });
+            }
         }
 
         mdtAjaxPaginationHelper.prototype.getStartRowIndex = function(){
@@ -75,6 +84,12 @@
                     that.totalResultCount = data.totalResultCount;
                     that.totalPages = Math.ceil(data.totalResultCount / that.rowsPerPage);
 
+                    if(that.totalResultCount == 0){
+                        that.isNoResults = true;
+                    }else{
+                        that.isNoResults = false;
+                    }
+
                     that.isLoadError = false;
                     that.isLoading = false;
 
@@ -83,6 +98,7 @@
 
                     that.isLoadError = true;
                     that.isLoading = false;
+                    that.isNoResults = true;
                 });
         };
 
@@ -100,6 +116,7 @@
                         attributes: {
                             editableField: false
                         },
+                        columnKey: columnKey,
                         value: _.get(row, columnKey)
                     });
                 });

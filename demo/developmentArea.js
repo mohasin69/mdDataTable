@@ -2,7 +2,7 @@
     'use strict';
 
     angular.module('developmentAreaApp', ['ngMaterial', 'mdDataTable']);
-    angular.module('developmentAreaApp').controller('DevelopmentAreaController', function($scope){
+    angular.module('developmentAreaApp').controller('DevelopmentAreaController', function($scope, $timeout){
         $scope.nutritionList = [
             {
                 id: 601,

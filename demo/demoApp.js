@@ -61,6 +61,12 @@
                 name: 'Ajax support',
                 codepen: 'BjpNow'
             },{
+                name: 'Ajax search support',
+                codepen: 'RRrjLk'
+            },{
+                name: 'Ajax html cell support',
+                codepen: 'pbLYwq'
+            },{
                 name: 'Search',
                 codepen: 'bEBKYx'
             },{
@@ -99,7 +105,9 @@
         'exampleApp11',
         'exampleApp12',
         'exampleApp13',
-        'exampleApp14'
+        'exampleApp14',
+        'exampleApp15',
+        'exampleApp16'
     ]);
 
     angular.module('demo').service('PageService', PageService);

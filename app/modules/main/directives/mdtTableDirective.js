@@ -72,6 +72,14 @@
      * @param {string=} mdtRowPaginatorErrorMessage overrides default error message when promise gets rejected by the
      *      paginator function.
      *
+     * @param {string=} mdtRowPaginatorNoResultsMessage overrides default 'no results' message.
+     *
+     * @param {function(loadPageCallback)=} mdtTriggerRequest provide a callback function for manually triggering an
+     *      ajax request. Can be useful when you want to populate the results in the table manually. (e.g.: having a
+     *      search field in your page which then can trigger a new request in the table to show the results based on
+     *      that filter.
+     *
+     * @param {object=} mdtTranslations accepts various key-value pairs for custom translations.
      *
      * @example
      * <h2>`mdt-row` attribute:</h2>
@@ -79,7 +87,7 @@
      * When column names are: `Product name`, `Creator`, `Last Update`
      * The passed data row's structure: `id`, `item_name`, `update_date`, `created_by`
      *
-     * Then the following setup will parese the data to the right columns:
+     * Then the following setup will parse the data to the right columns:
      * <pre>
      *     <mdt-table
      *         mdt-row="{
@@ -115,10 +123,15 @@
                 mdtRow: '=',
                 mdtRowPaginator: '&?',
                 mdtRowPaginatorErrorMessage:"@",
-                virtualRepeat: '='
+                mdtRowPaginatorNoResultsMessage:"@",
+                virtualRepeat: '=',
+                mdtTriggerRequest: '&?',
+                mdtTranslations: '=?'
             },
             controller: function mdtTableController($scope){
                 var vm = this;
+
+                setDefaultTranslations();
 
                 initTableStorageServiceAndBindMethods();
 
@@ -136,13 +149,25 @@
                             paginationSetting: $scope.paginatedRows,
                             mdtRowOptions: $scope.mdtRow,
                             mdtRowPaginatorFunction: $scope.mdtRowPaginator,
-                            mdtRowPaginatorErrorMessage: $scope.mdtRowPaginatorErrorMessage
+                            mdtRowPaginatorErrorMessage: $scope.mdtRowPaginatorErrorMessage,
+                            mdtRowPaginatorNoResultsMessage: $scope.mdtRowPaginatorNoResultsMessage,
+                            mdtTriggerRequest: $scope.mdtTriggerRequest
                         });
                     }
                 }
 
                 function addHeaderCell(ops){
                     vm.tableDataStorageService.addHeaderCellData(ops);
+                }
+
+                function setDefaultTranslations(){
+                    $scope.mdtTranslations = $scope.mdtTranslations || {};
+
+                    $scope.mdtTranslations.rowsPerPage = $scope.mdtTranslations.rowsPerPage || 'Rows per page:';
+
+                    $scope.mdtTranslations.largeEditDialog = $scope.mdtTranslations.largeEditDialog || {};
+                    $scope.mdtTranslations.largeEditDialog.saveButtonLabel = $scope.mdtTranslations.largeEditDialog.saveButtonLabel || 'Save';
+                    $scope.mdtTranslations.largeEditDialog.cancelButtonLabel = $scope.mdtTranslations.largeEditDialog.cancelButtonLabel || 'Cancel';
                 }
             },
             link: function($scope, element, attrs, ctrl, transclude){
@@ -186,7 +211,13 @@
                         columnValues = [];
 
                         _.each($scope.mdtRow['column-keys'], function(columnKey){
-                            columnValues.push(_.get(row, columnKey));
+                            columnValues.push({
+                                attributes: {
+                                    editableField: false
+                                },
+                                columnKey: columnKey,
+                                value: _.get(row, columnKey)
+                            });
                         });
 
                         ctrl.tableDataStorageService.addRowData(rowId, columnValues);
@@ -205,12 +236,15 @@
                     transclude(function (clone) {
                         var headings = [];
                         var body = [];
+                        var customCell = [];
 
                         _.each(clone, function (child) {
                             var $child = angular.element(child);
 
                             if ($child.hasClass('theadTrRow')) {
                                 headings.push($child);
+                            } else if($child.hasClass('customCell')) {
+                                customCell.push($child);
                             } else {
                                 body.push($child);
                             }
@@ -240,7 +274,8 @@
                         focusOnOpen: false,
                         locals: {
                             position: position,
-                            cellData: JSON.parse(JSON.stringify(cellData))
+                            cellData: JSON.parse(JSON.stringify(cellData)),
+                            mdtTranslations: $scope.mdtTranslations
                         }
                     };
 

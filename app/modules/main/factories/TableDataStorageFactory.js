@@ -6,6 +6,7 @@
         function TableDataStorageService(){
             this.storage = [];
             this.header = [];
+            this.customCells = {};
 
             this.sortByColumnLastIndex = null;
             this.orderByAscending = true;
@@ -91,11 +92,11 @@
             var sortFunction;
             if (typeof iteratee === 'function') {
                 sortFunction = function(rowData) {
-                    return iteratee(rowData.data[index], rowData, index);
+                    return iteratee(rowData.data[index].value, rowData, index);
                 };
             } else {
                 sortFunction = function (rowData) {
-                    return rowData.data[index];
+                    return rowData.data[index].value;
                 };
             }
 

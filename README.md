@@ -1,8 +1,7 @@
-Angular material table. Complete implementation of google material design based on angular material components.
+## Usage statistics
 
-> Live demo http://iamisti.github.io/mdDataTable/
-
-> If you like what you see, you can even make it better by donating the project with even a small amount https://www.paypal.me/iamisti
+[![NPM](https://nodei.co/npm-dl/md-data-table.png?months=6&height=3)](https://nodei.co/npm/md-data-table/)
+[![NPM](https://nodei.co/npm/md-data-table.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/md-data-table/)
 
 [![Build Status](https://travis-ci.org/iamisti/mdDataTable.svg?branch=master)](https://travis-ci.org/iamisti/mdDataTable) 
 [![Code Climate](https://codeclimate.com/github/iamisti/mdDataTable/badges/gpa.svg)](https://codeclimate.com/github/iamisti/mdDataTable) 
@@ -10,9 +9,13 @@ Angular material table. Complete implementation of google material design based 
 [![Dependency Status](https://gemnasium.com/iamisti/mdDataTable.svg)](https://gemnasium.com/iamisti/mdDataTable)
 [![Codacy Badge](https://api.codacy.com/project/badge/grade/fdcfe195e886430aaefefa54c972d3f7)](https://www.codacy.com/app/programtervezo/mdDataTable)
 
+Angular material table. Complete implementation of google material design based on angular material components.
+
+> Live demo http://iamisti.github.io/mdDataTable/
+
 ## Install
 
-1. `bower install mdDataTable` or [download the source](https://github.com/iamisti/mdDataTable/archive/master.zip).
+1. `bower install mdDataTable` or `npm install mdDataTable` or [download the source](https://github.com/iamisti/mdDataTable/archive/master.zip).
 2. Make sure the `mdDataTable` lib is loaded. It's served in three different files: `md-data-table-style.css`, `md-data-table.js`, `md-data-table-templates.js`
 3. Add `mdDataTable` as a dependency of your app.
 
@@ -37,6 +40,9 @@ http://www.google.com/design/spec/components/data-tables.html
  - mdt-row
  - mdt-row-paginator
  - mdt-row-paginator-error-message
+ - mdt-row-paginator-no-results-message
+ - mdt-trigger-request
+ - mdt-translations
 
 [Column attributes (`mdt-column`)](#column-attributes)
  - align-rule
@@ -51,6 +57,10 @@ http://www.google.com/design/spec/components/data-tables.html
  - ! inline-menu
  - editable-field
  - html-content
+ 
+[Custom cell content (`mdt-custom-cell`)](#custom-cell-content)
+ - column-key
+
 
 ## Overview
 > In its simplest form, a data table contains a top row of column names, and rows for data.
@@ -112,7 +122,11 @@ http://www.google.com/design/spec/components/data-tables.html
 |:white_check_mark:|                                    | data                            | Array         | required, The input data |
 |:white_check_mark:|                                    | table-row-id-key                | String|Integer| optional (same as `table-row-id`), defines the id of the row. Useful if you specified the callback function (`delete-row-callback`) for deleting a row. |
 |:white_check_mark:|                                    | column-keys                     | Array         | required, property names of the passed data array. Makes it possible to configure which property should go in which column. |
-|:x:               | html-content support              |                                 |               | |
+|:white_check_mark:| mdt-translations                   |                                 | Object        | optional, makes it possible to provide a custom translated texts in the table. |
+|:white_check_mark:|                                    | rowsPerPage                     | String        | When you need to select the amount of rows visible on the page, this label appears next to the dropdown |
+|:white_check_mark:|                                    | largeEditDialog.saveButtonLabel | String        | When edit mode is on, in the modal you can click on a button which has the 'Save' label. |
+|:white_check_mark:|                                    | largeEditDialog.cancelButtonLabel| String        | When edit mode is on, in the modal you can click on a button which has the : 'Cancel' label. |
+Html support is available for `mdt-row`, see more: [Custom cell content (`mdt-custom-cell`)](#custom-cell-content)
 
 ## Example usage for `mdt-row` attribute:
 ```html
@@ -129,7 +143,7 @@ http://www.google.com/design/spec/components/data-tables.html
         <mdt-column>Dessert (100g serving)</mdt-column>
         <mdt-column>Type</mdt-column>
         <mdt-column>Calories</mdt-column>
-        <mdt-column sortable-rows-default>Fat (g)</mt-column>
+        <mdt-column sortable-rows-default>Fat (g)</mdt-column>
         <mdt-column>Carbs (g)</mdt-column>
         <mdt-column>Protein (g)</mdt-column>
     </mdt-header-row>
@@ -142,6 +156,8 @@ http://www.google.com/design/spec/components/data-tables.html
 | ---------------- |----------------------------------- | ------------- | ------------- |
 |:white_check_mark:| mdt-row-paginator                  | Function      | optional, makes possible to provide a callback function which returns a promise, providing the data for the table. Has two parameters: `page` and `pageSize` |
 |:white_check_mark:| mdt-row-paginator-error-message    | String        | optional, overrides default error mesasge when promise gets rejected by the paginator function. |
+|:white_check_mark:| mdt-row-paginator-no-results-message    | String        | optional, overrides default 'no results' message when there are no results in the table. |
+|:white_check_mark:| mdt-trigger-request                | function(loadPageCallback) | optional, if `mdt-row-paginator` set, provides a callback function for manually triggering an ajax request. Can be useful when you want to populate the results in the table manually. (e.g.: having a search field in your page which then can trigger a new request in the table to show the results based on that filter.  |
 
 ## Example usage for `mdt-row-paginator` attribute:
 ```html
@@ -205,6 +221,41 @@ http://www.google.com/design/spec/components/data-tables.html
 | ---------------- | ---------------------------------------------- | ------------- | --------------- |
 |:white_check_mark:| table-row-id                                   | String|Integer| defines the id of the row. Useful if you specified the callback function (`delete-row-callback`) for deleting a row. |
 
+## Custom cell content
+>`mdt-custom-cell` attributes
+
+If you are using `mdt-row` attribute to load your data (which is only way of you are dealing with ajax contents), you can now have custom content for each cells you defined.
+
+| Available        | Params                                         | ChildParams        | Type          | Details         |
+| ---------------- | ---------------------------------------------- | ------------------ | ------------- | --------------- |
+|:white_check_mark:               | column-key                                     |                    | String        | required, specifies the column in the rows. |
+There is only one scope variable that you can use in your template, and it's called `value`. Check the example.
+
+## Example usage for `mdt-custom-cell`:
+```html
+<mdt-table>
+    <mdt-table mdt-row="{'data': filteredItems,
+                      'table-row-id-key': 'id',
+                      'column-keys': ['name', 'calories', 'fat', 'carbs', 'protein', 'sodium', 'calcium', 'iron']}">
+        <mdt-header-row>
+            <mdt-column align-rule="left">Dessert (100g serving)</mdt-column>
+            <mdt-column align-rule="right">Calories</mdt-column>
+            <mdt-column align-rule="right">Fat (g)</mdt-column>
+            <mdt-column align-rule="right">Carbs (g)</mdt-column>
+            <mdt-column align-rule="right">Protein (g)</mdt-column>
+            <mdt-column align-rule="right">Sodium (mg)</mdt-column>
+            <mdt-column align-rule="right">Calcium (%)</mdt-column>
+            <mdt-column align-rule="right">Iron (%)</mdt-column>
+        </mdt-header-row>
+
+        <!-- here you have your own, customised cell for every 'protein' column -->
+        <mdt-custom-cell column-key="protein">
+            <span ng-class="{'red': value > 5, 'green': value <= 5}">{{value}}</span>
+        </mdt-custom-cell>
+    </mdt-table>
+</mdt-table>
+```
+
 
 # Data-Cell attributes 
 >`mdt-cell` attributes
@@ -231,6 +282,7 @@ http://www.google.com/design/spec/components/data-tables.html
 | ---------------- | ---------------------------------------------- | ------------------ | ------------- | --------------- |
 |:white_check_mark:| html-content                                   |                    | Boolean       | When the cell content is not a simple value (html content) |
 
+
 ## Example usage:
 ```html
 <mdt-table
@@ -256,7 +308,7 @@ http://www.google.com/design/spec/components/data-tables.html
         <!-- in case of sortable columns, we can set the defaultly sortable column -->
         <mdt-column sortable-rows-default>
             Fat (g)
-        </mt-column>
+        </mdt-column>
         <mdt-column>Carbs (g)</mdt-column>
         <mdt-column>Protein (g)</mdt-column>
     </mdt-header-row>

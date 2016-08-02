@@ -46,6 +46,42 @@
 (function(){
     'use strict';
 
+    InlineEditModalCtrl.$inject = ['$scope', 'position', 'cellData', 'mdtTranslations', '$timeout', '$mdDialog'];
+    function InlineEditModalCtrl($scope, position, cellData, mdtTranslations, $timeout, $mdDialog){
+
+        $timeout(function() {
+            var el = $('md-dialog');
+            el.css('position', 'fixed');
+            el.css('top', position['top']);
+            el.css('left', position['left']);
+
+            el.find('input[type="text"]').focus();
+        });
+
+        $scope.cellData = cellData;
+        $scope.mdtTranslations = mdtTranslations;
+
+        $scope.saveRow = saveRow;
+        $scope.cancel = cancel;
+
+        function saveRow(){
+            if($scope.editFieldForm.$valid){
+                $mdDialog.hide(cellData.value);
+            }
+        }
+
+        function cancel(){
+            $mdDialog.cancel();
+        }
+    }
+
+    angular
+        .module('mdDataTable')
+        .controller('InlineEditModalCtrl', InlineEditModalCtrl);
+}());
+(function(){
+    'use strict';
+
     function mdtAlternateHeadersDirective(){
         return {
             restrict: 'E',
@@ -145,6 +181,14 @@
      * @param {string=} mdtRowPaginatorErrorMessage overrides default error message when promise gets rejected by the
      *      paginator function.
      *
+     * @param {string=} mdtRowPaginatorNoResultsMessage overrides default 'no results' message.
+     *
+     * @param {function(loadPageCallback)=} mdtTriggerRequest provide a callback function for manually triggering an
+     *      ajax request. Can be useful when you want to populate the results in the table manually. (e.g.: having a
+     *      search field in your page which then can trigger a new request in the table to show the results based on
+     *      that filter.
+     *
+     * @param {object=} mdtTranslations accepts various key-value pairs for custom translations.
      *
      * @example
      * <h2>`mdt-row` attribute:</h2>
@@ -152,7 +196,7 @@
      * When column names are: `Product name`, `Creator`, `Last Update`
      * The passed data row's structure: `id`, `item_name`, `update_date`, `created_by`
      *
-     * Then the following setup will parese the data to the right columns:
+     * Then the following setup will parse the data to the right columns:
      * <pre>
      *     <mdt-table
      *         mdt-row="{
@@ -189,10 +233,15 @@
                 mdtRow: '=',
                 mdtRowPaginator: '&?',
                 mdtRowPaginatorErrorMessage:"@",
-                virtualRepeat: '='
+                mdtRowPaginatorNoResultsMessage:"@",
+                virtualRepeat: '=',
+                mdtTriggerRequest: '&?',
+                mdtTranslations: '=?'
             },
             controller: ['$scope', function mdtTableController($scope){
                 var vm = this;
+
+                setDefaultTranslations();
 
                 initTableStorageServiceAndBindMethods();
 
@@ -210,13 +259,25 @@
                             paginationSetting: $scope.paginatedRows,
                             mdtRowOptions: $scope.mdtRow,
                             mdtRowPaginatorFunction: $scope.mdtRowPaginator,
-                            mdtRowPaginatorErrorMessage: $scope.mdtRowPaginatorErrorMessage
+                            mdtRowPaginatorErrorMessage: $scope.mdtRowPaginatorErrorMessage,
+                            mdtRowPaginatorNoResultsMessage: $scope.mdtRowPaginatorNoResultsMessage,
+                            mdtTriggerRequest: $scope.mdtTriggerRequest
                         });
                     }
                 }
 
                 function addHeaderCell(ops){
                     vm.tableDataStorageService.addHeaderCellData(ops);
+                }
+
+                function setDefaultTranslations(){
+                    $scope.mdtTranslations = $scope.mdtTranslations || {};
+
+                    $scope.mdtTranslations.rowsPerPage = $scope.mdtTranslations.rowsPerPage || 'Rows per page:';
+
+                    $scope.mdtTranslations.largeEditDialog = $scope.mdtTranslations.largeEditDialog || {};
+                    $scope.mdtTranslations.largeEditDialog.saveButtonLabel = $scope.mdtTranslations.largeEditDialog.saveButtonLabel || 'Save';
+                    $scope.mdtTranslations.largeEditDialog.cancelButtonLabel = $scope.mdtTranslations.largeEditDialog.cancelButtonLabel || 'Cancel';
                 }
             }],
             link: function($scope, element, attrs, ctrl, transclude){
@@ -260,7 +321,13 @@
                         columnValues = [];
 
                         _.each($scope.mdtRow['column-keys'], function(columnKey){
-                            columnValues.push(_.get(row, columnKey));
+                            columnValues.push({
+                                attributes: {
+                                    editableField: false
+                                },
+                                columnKey: columnKey,
+                                value: _.get(row, columnKey)
+                            });
                         });
 
                         ctrl.tableDataStorageService.addRowData(rowId, columnValues);
@@ -279,12 +346,15 @@
                     transclude(function (clone) {
                         var headings = [];
                         var body = [];
+                        var customCell = [];
 
                         _.each(clone, function (child) {
                             var $child = angular.element(child);
 
                             if ($child.hasClass('theadTrRow')) {
                                 headings.push($child);
+                            } else if($child.hasClass('customCell')) {
+                                customCell.push($child);
                             } else {
                                 body.push($child);
                             }
@@ -314,7 +384,8 @@
                         focusOnOpen: false,
                         locals: {
                             position: position,
-                            cellData: JSON.parse(JSON.stringify(cellData))
+                            cellData: JSON.parse(JSON.stringify(cellData)),
+                            mdtTranslations: $scope.mdtTranslations
                         }
                     };
 
@@ -342,46 +413,13 @@
 (function(){
     'use strict';
 
-    InlineEditModalCtrl.$inject = ['$scope', 'position', 'cellData', '$timeout', '$mdDialog'];
-    function InlineEditModalCtrl($scope, position, cellData, $timeout, $mdDialog){
-
-        $timeout(function() {
-            var el = $('md-dialog');
-            el.css('position', 'fixed');
-            el.css('top', position['top']);
-            el.css('left', position['left']);
-
-            el.find('input[type="text"]').focus();
-        });
-
-        $scope.cellData = cellData;
-        $scope.saveRow = saveRow;
-        $scope.cancel = cancel;
-
-        function saveRow(){
-            if($scope.editFieldForm.$valid){
-                $mdDialog.hide(cellData.value);
-            }
-        }
-
-        function cancel(){
-            $mdDialog.cancel();
-        }
-    }
-
-    angular
-        .module('mdDataTable')
-        .controller('InlineEditModalCtrl', InlineEditModalCtrl);
-}());
-(function(){
-    'use strict';
-
     TableDataStorageFactory.$inject = ['$log'];
     function TableDataStorageFactory($log){
 
         function TableDataStorageService(){
             this.storage = [];
             this.header = [];
+            this.customCells = {};
 
             this.sortByColumnLastIndex = null;
             this.orderByAscending = true;
@@ -467,11 +505,11 @@
             var sortFunction;
             if (typeof iteratee === 'function') {
                 sortFunction = function(rowData) {
-                    return iteratee(rowData.data[index], rowData, index);
+                    return iteratee(rowData.data[index].value, rowData, index);
                 };
             } else {
                 sortFunction = function (rowData) {
-                    return rowData.data[index];
+                    return rowData.data[index].value;
                 };
             }
 
@@ -565,6 +603,8 @@
             this.rowOptions = params.mdtRowOptions;
             this.paginatorFunction = params.mdtRowPaginatorFunction;
             this.mdtRowPaginatorErrorMessage = params.mdtRowPaginatorErrorMessage || 'Ajax error during loading contents.';
+            this.mdtRowPaginatorNoResultsMessage = params.mdtRowPaginatorNoResultsMessage || 'No results.';
+            this.mdtTriggerRequest = params.mdtTriggerRequest;
 
             if(params.paginationSetting &&
                 params.paginationSetting.hasOwnProperty('rowsPerPageValues') &&
@@ -584,6 +624,13 @@
 
             //fetching the 1st page
             this.fetchPage(this.page);
+
+            //triggering ajax call manually
+            if(this.mdtTriggerRequest) {
+                params.mdtTriggerRequest({
+                    loadPageCallback: this.fetchPage.bind(this)
+                });
+            }
         }
 
         mdtAjaxPaginationHelper.prototype.getStartRowIndex = function(){
@@ -632,6 +679,12 @@
                     that.totalResultCount = data.totalResultCount;
                     that.totalPages = Math.ceil(data.totalResultCount / that.rowsPerPage);
 
+                    if(that.totalResultCount == 0){
+                        that.isNoResults = true;
+                    }else{
+                        that.isNoResults = false;
+                    }
+
                     that.isLoadError = false;
                     that.isLoading = false;
 
@@ -640,6 +693,7 @@
 
                     that.isLoadError = true;
                     that.isLoading = false;
+                    that.isNoResults = true;
                 });
         };
 
@@ -657,6 +711,7 @@
                         attributes: {
                             editableField: false
                         },
+                        columnKey: columnKey,
                         value: _.get(row, columnKey)
                     });
                 });
@@ -767,27 +822,6 @@
 (function(){
     'use strict';
 
-    /**
-     * @name ColumnOptionProvider
-     * @returns possible assignable column options you can give
-     *
-     * @describe Representing the assignable properties to the columns you can give.
-     */
-    var ColumnOptionProvider = {
-        ALIGN_RULE : {
-            ALIGN_LEFT: 'left',
-            ALIGN_RIGHT: 'right'
-        }
-    };
-
-    angular
-        .module('mdDataTable')
-        .value('ColumnOptionProvider', ColumnOptionProvider);
-})();
-
-(function(){
-    'use strict';
-
     ColumnAlignmentHelper.$inject = ['ColumnOptionProvider'];
     function ColumnAlignmentHelper(ColumnOptionProvider){
         var service = this;
@@ -806,6 +840,27 @@
         .module('mdDataTable')
         .service('ColumnAlignmentHelper', ColumnAlignmentHelper);
 }());
+(function(){
+    'use strict';
+
+    /**
+     * @name ColumnOptionProvider
+     * @returns possible assignable column options you can give
+     *
+     * @describe Representing the assignable properties to the columns you can give.
+     */
+    var ColumnOptionProvider = {
+        ALIGN_RULE : {
+            ALIGN_LEFT: 'left',
+            ALIGN_RIGHT: 'right'
+        }
+    };
+
+    angular
+        .module('mdDataTable')
+        .value('ColumnOptionProvider', ColumnOptionProvider);
+})();
+
 (function(){
     'use strict';
 
@@ -1118,14 +1173,42 @@
 (function(){
     'use strict';
 
-    function mdtAddHtmlContentToCellDirective(){
+    mdtAddHtmlContentToCellDirective.$inject = ['$parse', '$compile', '$rootScope'];
+    function mdtAddHtmlContentToCellDirective($parse, $compile, $rootScope){
         return {
             restrict: 'A',
-            link: function($scope, element, attr){
-                $scope.$watch(attr.mdtAddHtmlContentToCell, function(val){
+            require: '^mdtTable',
+            link: function($scope, element, attr, ctrl){
+                $scope.$watch(function(){
+                    //this needs to be like that. Passing only `attr.mdtAddHtmlContentToCell` will cause digest to go crazy 10 times.
+                    // so we has to say explicitly that we only want to watch the content and nor the attributes, or the additional metadata.
+                    var val = $parse(attr.mdtAddHtmlContentToCell)($scope);
+
+                    return val.value;
+
+                }, function(val){
                     element.empty();
-                    element.append(val.value);
-                }, true);
+
+                    var originalValue = $parse(attr.mdtAddHtmlContentToCell)($scope);
+
+                    if(originalValue.columnKey && ctrl.tableDataStorageService.customCells[originalValue.columnKey]){
+                        var clonedHtml = ctrl.tableDataStorageService.customCells[originalValue.columnKey];
+
+                        var localScope = $rootScope.$new();
+                        localScope.value = val;
+
+                        $compile(clonedHtml)(localScope, function(cloned){
+                            element.append(cloned);
+                        });
+                    }else{
+                        element.append(val);
+                    }
+
+
+                }, false);
+                // issue with false value. If fields are editable then it won't reflect the change.
+
+                //console.log(ctrl.tableDataStorageService);
             }
         };
     }
@@ -1152,6 +1235,32 @@
     angular
         .module('mdDataTable')
         .directive('mdtAnimateSortIconHandler', mdtAnimateSortIconHandlerDirective);
+}());
+(function(){
+    'use strict';
+
+    function mdtCustomCellDirective(){
+        return {
+            restrict: 'E',
+            transclude: true,
+            template: '<span class="customCell" ng-transclude></span>',
+            require: '^mdtTable',
+            link: {
+                pre: function($scope, element, attrs, ctrl, transclude){
+                    transclude(function (clone) {
+                        var columnKey = attrs.columnKey;
+
+                        ctrl.tableDataStorageService.customCells[columnKey] = clone.clone();
+                        //element.append(clone);
+                    });
+                }
+            }
+        };
+    }
+
+    angular
+        .module('mdDataTable')
+        .directive('mdtCustomCell', mdtCustomCellDirective);
 }());
 (function(){
     'use strict';
@@ -1216,8 +1325,7 @@
 (function(){
     'use strict';
 
-    mdtCardFooterDirective.$inject = ['$timeout'];
-    function mdtCardFooterDirective($timeout){
+    function mdtCardFooterDirective(){
         return {
             restrict: 'E',
             templateUrl: '/main/templates/mdtCardFooter.html',
